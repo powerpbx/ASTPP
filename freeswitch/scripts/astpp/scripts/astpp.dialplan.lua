@@ -479,7 +479,10 @@ if (userinfo ~= nil) then
 		    	--~ Logger.notice(termination_value['path']..": "..termination_value['cost'] .." > "..user_rates['cost']..", skipping")  
 			    	
 		if (tonumber(termination_value['cost']) > tonumber(user_rates['cost']) ) then	
-			Logger.notice(termination_value['path']..": "..termination_value['cost'] .." > "..user_rates['cost']..", skipping for loss less routing")  
+			Logger.notice(termination_value['path']..": "..termination_value['cost'] .." > "..user_rates['cost']..", skipping for loss less routing")
+		
+		elseif ((tonumber(config['call_max_cost']) > 0) and ((tonumber(termination_value['cost']) > tonumber(config['call_max_cost'])))) then	
+			Logger.notice(termination_value['path']..": "..termination_value['cost'] .." > "..config['call_max_cost']..", skipping due to cost exceeding max cost per minute setting")
 		--	k = k+1    	
 		else
 			Logger.info("=============== Termination Rates Information ===================")
@@ -532,10 +535,10 @@ if (userinfo ~= nil) then
 				if(j > 1) then
 					old_trunk_id =carrier_array[tonumber(j)-1]['trunk_id']
 				end
-				rate_group_details = get_pricelists(userinfo)				
+				rate_group_details = get_pricelists(userinfo)
 				xml = freeswitch_xml_outbound(xml,destination_number,carrier_arr_array,callerid_array,rate_group_id,old_trunk_id,force_outbound_routes,rate_group_details['routing_type'],livecall_data)
 				j=j+1;
-			end			
+			end
 
 		    xml = freeswitch_xml_footer(xml)
 		else
