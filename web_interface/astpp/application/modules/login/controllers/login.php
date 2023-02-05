@@ -125,14 +125,33 @@ class Login extends MX_Controller
                         $this->session->set_userdata('accountinfo', $result);
                         $token = $this->token($result['id'], 'e', $result);
                         $this->session->set_userdata('token', $token);
+                        
+                        // PHP v8 does not included geoip, so we need to use geoip2 instead
+                        // cd /opt/ASTPP/web_interface
+                        // wget https://github.com/maxmind/GeoIP2-php/releases/download/v2.13.0/geoip2.phar
+                        // wget https://git.io/GeoLite2-Country.mmdb
+                        $remoteAddress = $this->input->server('REMOTE_ADDR');
+                        $geoip2File = '../geoip2.phar';
+                        $geoip2Db = '../GeoLite2-Country.mmdb';
+                        if (file_exists($geoip2File) && file_exists($geoip2Db)) {
+                            require $geoip2File;
+                            $reader = new \GeoIp2\Database\Reader($geoip2Db);
+                            $record = $reader->country($remoteAddress);
+                            $countryName = $record->country->name;
+                        } elseif (function_exists('geoip_country_name_by_name')) {// If no geoip2 test for geoip
+                            $countryName = geoip_country_name_by_name($remoteAddress);
+                        } else {
+                            $countryName = ''; //If no geoip, return empty string instead of failing
+                        }
+                        
                         // ASTPPCOM-941 Start
-                        $login_activity_array=array(
-                            "account_id"=>$result['id'],
-                            "country_name"=>ucwords(strtolower(geoip_country_name_by_name($this->input->server('REMOTE_ADDR')))),
-                            "timestamp"=>gmdate("Y-m-d H:i:s"),
-                            "user_agent"=> $this->agent->agent_string(),
-                            "ip"=>$this->input->server('REMOTE_ADDR')
-                            );
+                        $login_activity_array = array(
+                            "account_id"    => $result['id'],
+                            "country_name"  => ucwords(strtolower($countryName)),
+                            "timestamp"     => gmdate("Y-m-d H:i:s"),
+                            "user_agent"    => $this->agent->agent_string(),
+                            "ip"            => $remoteAddress
+                        );
                         $this->db->insert('login_activity_report', $login_activity_array);
                         // ASTPPCOM-941 END
                         $accessid = $this->encrypt($this->config->item('private_key'), $result['id'] . $result['type']);
